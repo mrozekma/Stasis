@@ -1,0 +1,1 @@
+class StasisError(Exception): pass
