@@ -32,3 +32,8 @@ class ActiveRecord(object):
 			self.id = store()[cls.table()].nextID()
 		data = {field: getattr(self, field) for field in cls.fields()}
 		store()[cls.table()][self.id] = data
+
+	def delete(self):
+		cls = self.__class__
+		if self.id:
+			del store()[cls.table()][self.id]

@@ -1,6 +1,6 @@
 import json
-from os import listdir, mkdir
-from os.path import isdir, join as pathjoin
+from os import listdir, mkdir, remove
+from os.path import isfile, isdir, join as pathjoin
 
 from StasisError import StasisError
 
@@ -43,6 +43,11 @@ class TableMap:
 		with open(pathjoin(self.dir, str(key)), 'w') as f:
 			json.dump(value, f)
 
+	def __delitem__(self, key):
+		path = pathjoin(self.dir, str(key))
+		if isfile(path):
+			remove(path)
+
 	def all(self):
 		if not isdir(self.dir):
 			return {}
@@ -69,6 +74,10 @@ class CachedTableMap:
 	def __setitem__(self, key, value):
 		self.cache[key] = value
 		TableMap(self.dir)[key] = value
+
+	def __delitem__(self, key):
+		del self.cache[key]
+		del TableMap(self.dir)[key]
 
 	def all(self):
 		return self.cache
