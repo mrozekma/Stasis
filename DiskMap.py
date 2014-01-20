@@ -5,14 +5,26 @@ from os.path import isdir, join as pathjoin
 from StasisError import StasisError
 
 class DiskMap:
-	def __init__(self, dir, create = False):
+	def __init__(self, dir, create = False, cache = False):
 		self.dir = dir
+		self.cache = None
+
 		if not isdir(self.dir):
 			if not create:
 				raise StasisError("No database at: %s" % self.dir)
 			mkdir(self.dir)
 
+		if cache:
+			self.cache = {}
+			# Preload all existing tables
+			for table in listdir(self.dir):
+				self[table]
+
 	def __getitem__(self, key):
+		if self.cache is not None:
+			if key not in self.cache:
+				self.cache[key] = CachedTableMap(self, pathjoin(self.dir, key))
+			return self.cache[key]
 		return TableMap(pathjoin(self.dir, key))
 
 class TableMap:
@@ -44,3 +56,24 @@ class TableMap:
 		if ids == []:
 			return 1
 		return max(ids) + 1
+
+class CachedTableMap:
+	def __init__(self, diskMap, path):
+		self.diskMap = diskMap
+		self.dir = path
+		self.cache = TableMap(self.dir).all()
+
+	def __getitem__(self, key):
+		return self.cache[key]
+
+	def __setitem__(self, key, value):
+		self.cache[key] = value
+		TableMap(self.dir)[key] = value
+
+	def all(self):
+		return self.cache
+
+	def nextID(self):
+		if self.cache == {}:
+			return 1
+		return max(self.cache) + 1
