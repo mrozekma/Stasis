@@ -62,6 +62,9 @@ class TableMap:
 		for key in listdir(self.dir):
 			yield key
 
+	def change(self, key):
+		return PendingChange(self, key)
+
 	def all(self):
 		if not isdir(self.dir):
 			return {}
@@ -99,6 +102,9 @@ class CachedTableMap:
 	def __iter__(self):
 		return self.cache.__iter__()
 
+	def change(self, key):
+		return PendingChange(self, key)
+
 	def all(self):
 		return self.cache
 
@@ -106,3 +112,15 @@ class CachedTableMap:
 		if self.cache == {}:
 			return 1
 		return max(self.cache) + 1
+
+class PendingChange:
+	def __init__(self, diskMap, key):
+		self.diskMap = diskMap
+		self.key = key
+
+	def __enter__(self):
+		self.value = self.diskMap[self.key]
+		return self.value
+
+	def __exit__(self, type, value, tb):
+		self.diskMap[self.key] = self.value
