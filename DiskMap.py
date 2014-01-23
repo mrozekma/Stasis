@@ -27,6 +27,13 @@ class DiskMap:
 			return self.cache[key]
 		return TableMap(pathjoin(self.dir, key))
 
+	def __len__(self):
+		return len(listdir(self.dir))
+
+	def __iter__(self):
+		for key in listdir(self.dir):
+			yield key
+
 class TableMap:
 	def __init__(self, path):
 		self.dir = path
@@ -47,6 +54,13 @@ class TableMap:
 		path = pathjoin(self.dir, str(key))
 		if isfile(path):
 			remove(path)
+
+	def __len__(self):
+		return len(listdir(self.dir))
+
+	def __iter__(self):
+		for key in listdir(self.dir):
+			yield key
 
 	def all(self):
 		if not isdir(self.dir):
@@ -78,6 +92,12 @@ class CachedTableMap:
 	def __delitem__(self, key):
 		del self.cache[key]
 		del TableMap(self.dir)[key]
+
+	def __len__(self):
+		return len(self.cache)
+
+	def __iter__(self):
+		return self.cache.__iter__()
 
 	def all(self):
 		return self.cache
