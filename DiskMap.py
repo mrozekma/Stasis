@@ -1,4 +1,4 @@
-import json
+import jsonpickle
 from os import listdir, mkdir, remove
 from os.path import isfile, isdir, join as pathjoin
 
@@ -42,13 +42,13 @@ class TableMap:
 		if not isdir(self.dir):
 			raise StasisError("Path not found: %s" % self.dir)
 		with open(pathjoin(self.dir, str(key)), 'r') as f:
-			return json.load(f)
+			return jsonpickle.decode(f.read())
 
 	def __setitem__(self, key, value):
 		if not isdir(self.dir):
 			mkdir(self.dir)
 		with open(pathjoin(self.dir, str(key)), 'w') as f:
-			json.dump(value, f)
+			f.write(jsonpickle.encode(value))
 
 	def __delitem__(self, key):
 		path = pathjoin(self.dir, str(key))
