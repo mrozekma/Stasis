@@ -2,7 +2,6 @@ from Safe import Safe
 from Singleton import get as store
 from StasisError import StasisError
 
-from collections import OrderedDict
 from inspect import getargspec, getmembers
 
 class ActiveRecord(object):
@@ -32,8 +31,8 @@ class ActiveRecord(object):
 			if orderby.startswith('-'):
 				reverse = True
 				orderby = orderby[1:]
-			data.sort(key = lambda (k, v): v[orderby], reverse = reverse)
-		return OrderedDict((k, cls(**v)) for k, v in data)
+			data.sort(key = lambda row: row[orderby], reverse = reverse)
+		return [cls(**row) for row in data]
 
 	def save(self):
 		cls = self.__class__
