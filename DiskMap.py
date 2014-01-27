@@ -1,6 +1,7 @@
 import jsonpickle
 from os import listdir, mkdir, remove
 from os.path import exists, isfile, isdir, join as pathjoin
+from shutil import rmtree
 
 from StasisError import StasisError
 
@@ -32,6 +33,13 @@ class DiskMap:
 				self.cache[key] = CachedTableMap(self, pathjoin(self.dir, key))
 			return self.cache[key]
 		return TableMap(pathjoin(self.dir, key))
+
+	def __delitem__(self, key):
+		if self.cache is not None and key in self.cache:
+			del self.cache[key]
+		dir = pathjoin(self.dir, key)
+		if isdir(dir):
+			rmtree(dir)
 
 	def __len__(self):
 		return len(listdir(self.dir))
@@ -79,6 +87,12 @@ class TableMap:
 	def keys(self):
 		return filter(lambda key: not (isinstance(key, str) and key.startswith('__')), listdir(self.dir))
 
+	def values(self):
+		return [self[k] for k in self.keys()]
+
+	def iteritems(self):
+		return self.all().iteritems()
+
 	def change(self, key):
 		return PendingChange(self, key)
 
@@ -121,6 +135,12 @@ class CachedTableMap:
 
 	def keys(self):
 		return filter(lambda key: not (isinstance(key, str) and key.startswith('__')), self.cache)
+
+	def values(self):
+		return [v for k, v in self.cache.iteritems() if not (isinstance(k, str) and k.startswith('__'))]
+
+	def iteritems(self):
+		return self.all().iteritems()
 
 	def change(self, key):
 		return PendingChange(self, key)

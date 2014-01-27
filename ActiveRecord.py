@@ -18,14 +18,16 @@ class ActiveRecord(object):
 
 	@classmethod
 	def load(cls, id):
+		if id not in store()[cls.table()]:
+			return None
 		data = store()[cls.table()][id]
 		return cls(**data)
 
 	@classmethod
 	def loadAll(cls, orderby = None, **attrs):
-		data = store()[cls.table()].all().items()
+		data = store()[cls.table()].values()
 		if attrs:
-			data = filter(lambda (k, v): all(v[filtK] == filtV for filtK, filtV in attrs.iteritems()), data)
+			data = filter(lambda row: all(row[k] == v for k, v in attrs.iteritems()), data)
 		if orderby is not None:
 			reverse = False
 			if orderby.startswith('-'):
