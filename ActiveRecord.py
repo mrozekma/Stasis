@@ -17,15 +17,37 @@ class ActiveRecord(object):
 		return getargspec(cls.__init__).args[1:]
 
 	@classmethod
-	def load(cls, id):
-		if id not in store()[cls.table()]:
+	def loadDataFilter(cls, data, **attrs):
+		return data
+
+	@classmethod
+	def saveDataFilter(cls, data):
+		return data
+
+	@classmethod
+	def load(cls, id = None, **attrs):
+		if id is None:
+			data = store()[cls.table()].values()
+		else:
+			if id not in store()[cls.table()]:
+				return None
+			data = [store()[cls.table()][id]]
+		data = filter(None, (cls.loadDataFilter(row, **attrs) for row in data))
+		if attrs:
+			data = filter(lambda row: all(row[k] == v for k, v in attrs.iteritems()), data)
+		if len(data) == 0:
 			return None
-		data = store()[cls.table()][id]
-		return cls(**data)
+		elif len(data) == 1:
+			return cls(**data[0])
+		else:
+			raise StasisError("Too many load results (cls %s, id %s, attrs %s)" % (cls, id, attrs))
 
 	@classmethod
 	def loadAll(cls, orderby = None, **attrs):
 		data = store()[cls.table()].values()
+		data = filter(None, (cls.loadDataFilter(row, **attrs) for row in data))
+		if not data:
+			return []
 		if attrs:
 			data = filter(lambda row: all(row[k] == v for k, v in attrs.iteritems()), data)
 		if orderby is not None:
@@ -38,9 +60,10 @@ class ActiveRecord(object):
 
 	def save(self):
 		cls = self.__class__
-		if not self.id:
-			self.id = store()[cls.table()].nextID()
 		data = {field: getattr(self, field) for field in cls.fields()}
+		data = cls.saveDataFilter(data)
+		if not self.id:
+			self.id = data['id'] = store()[cls.table()].nextID()
 		store()[cls.table()][self.id] = data
 
 	def delete(self):
@@ -54,6 +77,8 @@ def idToObj(cls, field):
 		if not self:
 			return None
 		val = getattr(self, field)
+		if val is None:
+			return None
 		if isinstance(val, list):
 			return map(cls.load, val)
 		elif isinstance(val, set):
