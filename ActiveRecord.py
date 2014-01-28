@@ -71,6 +71,15 @@ class ActiveRecord(object):
 		if self.id:
 			del store()[cls.table()][self.id]
 
+	def __eq__(self, other):
+		return self and other and self.id == other.id
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __hash__(self):
+		return self.id or object.__hash__(self)
+
 # getter
 def idToObj(cls, field):
 	def fn(self):
