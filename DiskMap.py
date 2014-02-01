@@ -1,7 +1,8 @@
 import jsonpickle
-from os import listdir, mkdir, remove
-from os.path import exists, isfile, isdir, join as pathjoin
+from os import close, listdir, mkdir, remove, rename, write
+from os.path import dirname, exists, isfile, isdir, join as pathjoin
 from shutil import rmtree
+from tempfile import mkstemp
 
 from StasisError import StasisError
 
@@ -24,10 +25,15 @@ class DiskMap:
 		if cache:
 			self.cache = {}
 			# Preload all existing tables
-			for table in listdir(self.dir):
+			for table in self.tables():
 				self[table]
 
+	def tables(self):
+		return filter(lambda name: not name.startswith('__'), listdir(self.dir))
+
 	def __getitem__(self, key):
+		if key.startswith('__'):
+			raise KeyError("Bad table name: %s" % key)
 		if self.cache is not None:
 			if key not in self.cache:
 				self.cache[key] = CachedTableMap(self, pathjoin(self.dir, key))
@@ -35,6 +41,8 @@ class DiskMap:
 		return TableMap(pathjoin(self.dir, key))
 
 	def __delitem__(self, key):
+		if key not in self.tables():
+			raise KeyError("Bad table name: %s" % key)
 		if self.cache is not None and key in self.cache:
 			del self.cache[key]
 		dir = pathjoin(self.dir, key)
@@ -42,13 +50,13 @@ class DiskMap:
 			rmtree(dir)
 
 	def __len__(self):
-		return len(listdir(self.dir))
+		return len(self.tables())
 
 	def __contains__(self, key):
-		return exists(pathjoin(self.dir, str(key)))
+		return not key.startswith('__') and exists(pathjoin(self.dir, str(key)))
 
 	def __iter__(self):
-		for key in listdir(self.dir):
+		for key in self.tables():
 			yield key
 
 class TableMap:
@@ -59,13 +67,15 @@ class TableMap:
 		if not isdir(self.dir):
 			raise StasisError("Path not found: %s" % self.dir)
 		with open(pathjoin(self.dir, str(key)), 'r') as f:
-			return jsonpickle.decode(f.read())
+			return jsonpickle.decode(f.read(), keys = True)
 
 	def __setitem__(self, key, value):
 		if not isdir(self.dir):
 			mkdir(self.dir)
-		with open(pathjoin(self.dir, str(key)), 'w') as f:
-			f.write(jsonpickle.encode(value))
+		fd, tempfile = mkstemp(prefix = '__tmp', dir = dirname(self.dir))
+		write(fd, jsonpickle.encode(value, keys = True))
+		close(fd)
+		rename(tempfile, pathjoin(self.dir, str(key)))
 		if isinstance(key, int) and key >= self.nextID():
 			self['__nextid'] = key + 1
 
