@@ -61,9 +61,9 @@ class ActiveRecord(object):
 	def save(self):
 		cls = self.__class__
 		data = {field: getattr(self, field) for field in cls.fields()}
-		data = cls.saveDataFilter(data)
 		if not self.id:
 			self.id = data['id'] = store()[cls.table()].nextID()
+		data = cls.saveDataFilter(data)
 		store()[cls.table()][self.id] = data
 
 	def delete(self):
@@ -90,8 +90,8 @@ def idToObj(cls, field):
 			return None
 		if isinstance(val, list):
 			return map(cls.load, val)
-		elif isinstance(val, set):
-			return set(map(cls.load, val))
+		elif isinstance(val, (set, frozenset)):
+			return frozenset(map(cls.load, val))
 		else:
 			return cls.load(val)
 	return fn
@@ -103,7 +103,7 @@ def objToID(field):
 			if not all(o.id for o in obj):
 				raise ValueError("Attempted to pull ID from unsaved object in list")
 			setattr(self, field, [o.id for o in obj])
-		elif isinstance(obj, set):
+		elif isinstance(obj, (frozenset, set)):
 			if not all(o.id for o in obj):
 				raise ValueError("Attempted to pull ID from unsaved object in set")
 			setattr(self, field, set(o.id for o in obj))
