@@ -9,18 +9,18 @@ from StasisError import StasisError
 class Lock():
 	def __init__(self):
 		self.lock = mutexProvider()
-		self.count = 0
-		self.exclusiveHold = None
+		self.shareHolds = []
+		self.exclusiveHolds = []
 
 	def share(self):
 		# sys.__stdout__.write("acquiring shared lock: %s\n" % get_ident())
 		while True:
 			self.lock.acquire()
-			if self.exclusiveHold and self.exclusiveHold != get_ident():
+			if self.exclusiveHolds != [] and set(self.exclusiveHolds) != {get_ident(),}:
 				self.lock.release()
 				sleep(0)
 			else:
-				self.count += 1
+				self.shareHolds.append(get_ident())
 				# sys.__stdout__.write("got shared lock (%d total)\n" % self.count)
 				self.lock.release()
 				break
@@ -32,35 +32,39 @@ class Lock():
 		while True:
 			self.lock.acquire()
 			# sys.__stdout__.write("xl lock try\n")
-			if self.count > 0 and self.exclusiveHold != get_ident():
-				# sys.__stdout__.write("** %d %s %s\n" % self.count, self.exclusiveHold, get_ident())
+			holds = self.shareHolds + self.exclusiveHolds
+			if holds != [] and set(holds) != {get_ident(),}:
+				# sys.__stdout__.write("** %s %s %s\n" % (self.shareHolds, self.exclusiveHolds, get_ident()))
 				self.lock.release()
 				# sys.__stdout__.write("xl lock inner end\n")
 				sleep(0)
 			else:
 				# sys.__stdout__.write("got exclusive lock\n")
-				self.count += 1
-				self.exclusiveHold = get_ident()
+				self.exclusiveHolds.append(get_ident())
 				self.lock.release()
 				# sys.__stdout__.write("xl lock inner end\n")
 				break
 
-	def release(self):
+	# 'exclusive' is only used when a thread has both a shared and exclusive hold, to decide which to release
+	def release(self, exclusive = False):
 		# sys.__stdout__.write("releasing lock: %d\n" % get_ident())
 		# import traceback
 		# traceback.print_stack(file = sys.__stdout__)
 		self.lock.acquire()
 		# sys.__stdout__.write("step\n")
-		if self.count == 0:
+		ident = get_ident()
+		if ident in self.shareHolds and ident in self.exclusiveHolds:
+			if exclusive:
+				self.exclusiveHolds.remove(ident)
+			else:
+				self.shareHolds.remove(ident)
+		elif ident in self.shareHolds:
+			self.shareHolds.remove(ident)
+		elif ident in self.exclusiveHolds:
+			self.exclusiveHolds.remove(ident)
+		else:
 			self.lock.release()
 			raise StasisError("Attempted to release an unheld lock")
-		self.count -= 1
-		if self.exclusiveHold:
-			if get_ident() != self.exclusiveHold:
-				self.lock.release()
-				raise StasisError("Exclusive lock released by wrong thread")
-			if self.count == 0:
-				self.exclusiveHold = None
 		self.lock.release()
 		# sys.__stdout__.write("lock released (%d remain)\n" % self.count)
 
@@ -83,6 +87,6 @@ def synchronized(exclusive = False):
 			try:
 				return f(self, *args, **kw)
 			finally:
-				self.lock.release()
+				self.lock.release(exclusive = exclusive)
 		return wrap2
 	return wrap
