@@ -141,6 +141,20 @@ class TableMap:
 	def nextID(self):
 		return self['__nextid'] if '__nextid' in self else 1
 
+	@synchronized()
+	def merge(self, tm):
+		for k, v in tm.iteritems():
+			self[k] = v
+
+	@synchronized()
+	def truncate(self, resetID = True):
+		keep = {k: self[k] for k in listdir(self.dir) if k.startswith('__')}
+		if resetID and '__nextid' in keep:
+			del keep['__nextid']
+		rmtree(self.dir)
+		for k, v in keep.iteritems():
+			self[k] = v
+
 class CachedTableMap:
 	def __init__(self, diskMap, path, lock):
 		self.diskMap = diskMap
@@ -199,6 +213,16 @@ class CachedTableMap:
 	@synchronized()
 	def nextID(self):
 		return self.parent.nextID()
+
+	@synchronized()
+	def merge(self, tm):
+		self.parent.merge(tm)
+		self.cache = self.parent.all()
+
+	@synchronized()
+	def truncate(self, resetID = True):
+		self.parent.truncate(resetID = resetID)
+		self.cache = {}
 
 class PendingChange:
 	def __init__(self, diskMap, key):
