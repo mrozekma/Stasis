@@ -72,6 +72,14 @@ class DiskMap:
 		for key in self.tables():
 			yield key
 
+	@synchronized()
+	def loadCache(self, key):
+		if not self.cache:
+			return
+		if key in self.cache and isinstance(self.cache[key], CachedTableMap):
+			return
+		self.cache[key] = CachedTableMap(self, pathjoin(self.dir, key), self.lock)
+
 class TableMap:
 	def __init__(self, path, lock):
 		self.dir = path

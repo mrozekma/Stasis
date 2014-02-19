@@ -58,6 +58,10 @@ class ActiveRecord(object):
 			data.sort(key = lambda row: row[orderby], reverse = reverse)
 		return [cls(**row) for row in data]
 
+	@classmethod
+	def cacheAll(cls):
+		store().loadCache(cls.table())
+
 	def save(self):
 		cls = self.__class__
 		data = {field: getattr(self, field) for field in cls.fields()}
