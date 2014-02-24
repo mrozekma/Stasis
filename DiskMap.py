@@ -2,6 +2,7 @@ import jsonpickle
 from os import close, listdir, mkdir, remove, rename, write
 from os.path import dirname, exists, isfile, isdir, join as pathjoin
 from shutil import rmtree
+import tarfile
 from tempfile import mkstemp
 
 from Lock import Lock, synchronized
@@ -79,6 +80,14 @@ class DiskMap:
 		if key in self.cache and isinstance(self.cache[key], CachedTableMap):
 			return
 		self.cache[key] = CachedTableMap(self, pathjoin(self.dir, key), self.lock)
+
+	@synchronized()
+	def archive(self, filename):
+		f = tarfile.open(filename, 'w:gz')
+		f.add(self.dir)
+		f.close()
+		if not exists(filename):
+			raise StasisError('Stasis archiving failed')
 
 class TableMap:
 	def __init__(self, path, lock):
