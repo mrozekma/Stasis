@@ -133,6 +133,8 @@ class TableMap:
 
 	@synchronized()
 	def keys(self):
+		if not exists(self.dir):
+			return []
 		return filter(lambda key: not (isinstance(key, str) and key.startswith('__')), listdir(self.dir))
 
 	@synchronized()
