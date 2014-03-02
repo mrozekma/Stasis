@@ -142,6 +142,10 @@ class TableMap:
 		return [self[k] for k in self.keys()]
 
 	@synchronized()
+	def items(self):
+		return self.all().items()
+
+	@synchronized()
 	def iteritems(self):
 		return self.all().iteritems()
 
@@ -216,6 +220,10 @@ class CachedTableMap:
 	@synchronized()
 	def values(self):
 		return [v for k, v in self.cache.iteritems() if not (isinstance(k, str) and k.startswith('__'))]
+
+	@synchronized()
+	def items(self):
+		return self.all().items()
 
 	@synchronized()
 	def iteritems(self):
