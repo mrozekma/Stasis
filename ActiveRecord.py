@@ -75,6 +75,11 @@ class ActiveRecord(object):
 		if self.id:
 			del store()[cls.table()][self.id]
 
+	@classmethod
+	def deleteAll(cls, **attrs):
+		for row in cls.loadAll(**attrs):
+			row.delete()
+
 	def __eq__(self, other):
 		return self and other and self.id == other.id
 
